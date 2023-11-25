@@ -39,6 +39,8 @@ async function readSecretKeyFromFile(filePath) {
 
 async function main() {
     const RPC = await getUserInput("Masukkan URL RPC: ");
+    const numTransactions = parseInt(await getUserInput("total transaction per wallet ? : "), 10);
+    const programIdInput = await getUserInput("Masukkan memo: ");
 
     const walletFilePath = 'wallet.txt';
     const secretKeys = await readSecretKeyFromFile(walletFilePath);
@@ -47,27 +49,26 @@ async function main() {
 
     async function logMemo(message, i) {
         const keypair = Keypair.fromSecretKey(bs58.decode(secretKeys[i]));
-        let tx = new Transaction();
-        await tx.add(
-            new TransactionInstruction({
-                keys: [{ pubkey: keypair.publicKey, isSigner: true, isWritable: true }],
-                data: Buffer.from(message, "utf-8"),
-                programId: new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"),
-            })
-        );
-        let result = await sendAndConfirmTransaction(SOLANA_CONNECTION, tx, [keypair]);
-        console.log("Transaction Completed :", `https://solscan.io/tx/${result}`);
-        return result;
+
+        for (let j = 0; j < numTransactions; j++) {
+            let tx = new Transaction();
+            await tx.add(
+                new TransactionInstruction({
+                    keys: [{ pubkey: keypair.publicKey, isSigner: true, isWritable: true }],
+                    data: Buffer.from(message, "utf-8"),
+                    programId: new PublicKey(programIdInput),
+                })
+            );
+            let result = await sendAndConfirmTransaction(SOLANA_CONNECTION, tx, [keypair]);
+            console.log("Transaction Completed:", `https://solscan.io/tx/${result}`);
+        }
     }
 
     const tick = await getUserInput("Masukkan tick: ");
-    const mintCount = 5;
 
-
-    for (let i = 0; i < mintCount; i++) {
+    for (let i = 0; i < secretKeys.length; i++) {
         await logMemo(tick, i);
     }
 }
-
 
 main().catch(err => console.error(err));
